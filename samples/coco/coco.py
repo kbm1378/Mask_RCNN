@@ -92,6 +92,30 @@ class CocoConfig(Config):
 ############################################################
 
 class CocoDataset(utils.Dataset):
+    def load_coco_custom(self, json_path, image_dir):
+        coco = COCO(json_path)
+        class_ids = sorted(coco.getCatIds())
+        if class_ids:
+            image_ids = []
+            for id in class_ids:
+                image_ids.extend(list(coco.getImgIds(catIds=[id])))
+            # Remove duplicates
+            image_ids = list(set(image_ids))
+        else:
+            # All images
+            image_ids = list(coco.imgs.keys())
+        for i in class_ids:
+            self.add_class("coco", i, coco.loadCats(i)[0]["name"])
+        for i in image_ids:
+            self.add_image(
+                "coco", image_id=i,
+                path=os.path.join(image_dir, coco.imgs[i]['file_name']),
+                width=coco.imgs[i]["width"],
+                height=coco.imgs[i]["height"],
+                annotations=coco.loadAnns(coco.getAnnIds(
+                    imgIds=[i], catIds=class_ids, iscrowd=None)))
+
+
     def load_coco(self, dataset_dir, subset, year=DEFAULT_DATASET_YEAR, class_ids=None,
                   class_map=None, return_coco=False, auto_download=False):
         """Load a subset of the COCO dataset.
